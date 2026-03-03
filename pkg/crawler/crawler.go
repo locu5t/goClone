@@ -41,9 +41,12 @@ func CloneSite(ctx context.Context, args []string, flag Flags) error {
 	}
 
 	// validate URL and initialize globals
-	u, err := url.ParseRequestURI(args[0])
-	if err != nil || u.Scheme == "" || u.Host == "" {
-		return fmt.Errorf("%q is not a valid URL", args[0])
+	u, droppedFragment, err := normalizeStartURL(args[0])
+	if err != nil {
+		return err
+	}
+	if droppedFragment != "" {
+		fmt.Printf("Notice: dropping URL fragment #%s for crawling; fragments are handled client-side by the browser.\n", droppedFragment)
 	}
 	domain = fmt.Sprintf("%s://%s", u.Scheme, u.Host)
 	projectURL = u
@@ -102,6 +105,17 @@ func CloneSite(ctx context.Context, args []string, flag Flags) error {
 	}
 
 	return nil
+}
+
+
+func normalizeStartURL(rawURL string) (*url.URL, string, error) {
+	u, err := url.Parse(rawURL)
+	if err != nil || u.Scheme == "" || u.Host == "" {
+		return nil, "", fmt.Errorf("%q is not a valid URL", rawURL)
+	}
+	fragment := u.Fragment
+	u.Fragment = ""
+	return u, fragment, nil
 }
 
 // processSrcset rewrites all URLs inside a srcset-like attribute value and triggers downloads
