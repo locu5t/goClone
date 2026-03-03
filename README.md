@@ -134,3 +134,48 @@ If you run Chrome inside Docker on Linux, the container might not be able to rea
 
 If rendering produces errors like `ERR_CONNECTION_REFUSED` or `ERR_NAME_NOT_RESOLVED`, adjust Docker networking as above and ensure you pass the full DevTools WebSocket URL from `/json/version` if necessary.
 
+
+## Windows quick start (Go CLI + Python UI)
+
+### Prerequisites
+
+- Go **1.21+** (with `go` available in PATH)
+- Python **3.10+** (with `python` available in PATH)
+
+### One-command run (recommended)
+
+From repo root in `cmd.exe`:
+
+```bat
+run.bat
+```
+
+`run.bat` will:
+1. Create or reuse `.venv`
+2. Install Python deps from `requirements.txt`
+3. Build `dist\goclone.exe` when missing or stale
+4. Launch the Tkinter UI
+
+### Build only (Windows binary)
+
+```bat
+python scripts\build_goclone.py --windows
+```
+
+This writes `dist\goclone.exe`.
+
+### Python UI usage
+
+The UI (`ui/app.py`) lets you set:
+- Target URL
+- Output directory (clone is executed with this directory as working directory)
+- Core CLI options/flags (`--user_agent`, `--proxy_string`, `--browser_endpoint`, `--assets_root`, `--servePort`, `--max_download_mb`, `--max_concurrent_downloads`, `--http_timeout_seconds`, and boolean flags)
+
+The lower panel streams process logs and final exit code from the Go binary.
+
+### Troubleshooting
+
+- **`python` not found**: install Python 3.10+ and enable "Add python.exe to PATH".
+- **`go` not found**: install Go 1.21+ and confirm `go version` works in a new terminal.
+- **Tkinter missing** (rare on custom Python builds): reinstall Python with Tk/Tcl support.
+- **Binary not found in UI**: run `run.bat` or build manually using the command above.

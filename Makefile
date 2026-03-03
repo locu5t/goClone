@@ -3,7 +3,7 @@ SHELL := /bin/bash
 GO ?= go
 PKGS := ./...
 
-.PHONY: all tidy deps build test lint release
+.PHONY: all tidy deps build build-windows test lint release
 
 all: tidy build test
 
@@ -24,3 +24,7 @@ all: tidy build test
 
  release:
 	goreleaser release --clean
+
+ build-windows:
+	mkdir -p dist
+	GOOS=windows GOARCH=amd64 $(GO) build -o dist/goclone.exe ./cmd
