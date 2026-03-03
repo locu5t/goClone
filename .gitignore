@@ -83,3 +83,8 @@ cmd/*
 !cmd/main.go
 
 dist/*
+.venv/
+build/
+
+__pycache__/
+*.pyc
