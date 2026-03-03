@@ -117,3 +117,25 @@ func Test_Preload_AsFont(t *testing.T) {
 		t.Fatalf("preload font not handled")
 	}
 }
+
+func Test_normalizeStartURL_DropsFragment(t *testing.T) {
+	u, fragment, err := normalizeStartURL("https://ticktick.com/webapp/#p/abc/tasks")
+	if err != nil {
+		t.Fatalf("normalize: %v", err)
+	}
+	if fragment != "p/abc/tasks" {
+		t.Fatalf("unexpected fragment: %q", fragment)
+	}
+	if u.Fragment != "" {
+		t.Fatalf("fragment should be empty after normalize")
+	}
+	if got := u.String(); got != "https://ticktick.com/webapp/" {
+		t.Fatalf("unexpected normalized URL: %q", got)
+	}
+}
+
+func Test_normalizeStartURL_Invalid(t *testing.T) {
+	if _, _, err := normalizeStartURL("not-a-url"); err == nil {
+		t.Fatalf("expected error for invalid URL")
+	}
+}

@@ -3,7 +3,7 @@ package fsutil
 import (
 	"io"
 	"os"
-	"path"
+	"path/filepath"
 )
 
 // some commonly flag consts for open file
@@ -15,13 +15,13 @@ const (
 )
 
 // OpenFile like os.OpenFile, but will auto create dir.
-func OpenFile(filepath string, flag int, perm os.FileMode) (*os.File, error) {
-	fileDir := path.Dir(filepath)
+func OpenFile(filePath string, flag int, perm os.FileMode) (*os.File, error) {
+	fileDir := filepath.Dir(filePath)
 	if err := os.MkdirAll(fileDir, 0o775); err != nil {
 		return nil, err
 	}
 
-	file, err := os.OpenFile(filepath, flag, perm)
+	file, err := os.OpenFile(filePath, flag, perm)
 	if err != nil {
 		return nil, err
 	}
