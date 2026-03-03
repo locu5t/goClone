@@ -2,6 +2,8 @@ package crawler
 
 import (
 	"net/url"
+	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -115,5 +117,19 @@ func Test_Preload_AsFont(t *testing.T) {
 	out := saveIMG(abs, "/font/a.woff2", body)
 	if out == body {
 		t.Fatalf("preload font not handled")
+	}
+}
+
+func Test_makePageFilePath_SanitizesWindowsUnsafeSegments(t *testing.T) {
+	base := t.TempDir()
+	got := makePageFilePath(base, "/webapp/#p/69a6f5fd34c4417aac7d3b4c/tasks")
+	want := filepath.Join(base, "webapp", "#p", "69a6f5fd34c4417aac7d3b4c", "tasks", "index.html")
+	if got != want {
+		t.Fatalf("unexpected path. got=%q want=%q", got, want)
+	}
+
+	got = makePageFilePath(base, `/a/b:c?d*e|f\g"h<i>j`)
+	if strings.ContainsAny(got, `:?*|\"<>`) {
+		t.Fatalf("unsafe characters should be sanitized: %q", got)
 	}
 }

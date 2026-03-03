@@ -50,9 +50,17 @@ func CloneSite(ctx context.Context, args []string, flag Flags) error {
 	projectPath = filepath.Join(fsutil.Workdir(), projectURL.Host)
 	files = filesBase{}
 
+	startURL := u.String()
+	if flag.BrowserEndpoint == "" && u.Fragment != "" {
+		fmt.Println("Warning: URL contains a fragment (#...). Fragments are not sent in HTTP requests, so non-rendered crawling may miss SPA routes.")
+		uNoFragment := *u
+		uNoFragment.Fragment = ""
+		startURL = uNoFragment.String()
+	}
+
 	geziyorOptions := &geziyor.Options{
 		AllowedDomains:    []string{projectURL.Host},
-		StartURLs:         []string{u.String()},
+		StartURLs:         []string{startURL},
 		ParseFunc:         quotesParse,
 		UserAgent:         flag.UserAgent,
 		CookiesDisabled:   flag.Cookies,
@@ -65,7 +73,7 @@ func CloneSite(ctx context.Context, args []string, flag Flags) error {
 	if flag.BrowserEndpoint != "" {
 		geziyorOptions.BrowserEndpoint = flag.BrowserEndpoint
 		geziyorOptions.StartRequestsFunc = func(g *geziyor.Geziyor) {
-			g.GetRendered(u.String(), g.Opt.ParseFunc)
+			g.GetRendered(startURL, g.Opt.ParseFunc)
 		}
 	}
 
@@ -127,6 +135,9 @@ func processSrcset(attr string, body string, join func(string) string) string {
 func quotesParse(g *geziyor.Geziyor, r *client.Response) {
 	body := string(r.Body)
 	urlPath := r.Response.Request.URL.Path
+	if urlPath == "" {
+		urlPath = "/"
+	}
 	fmt.Printf("page: %s://%s%s\n", projectURL.Scheme, projectURL.Host, urlPath)
 
 	// CSS files
@@ -252,25 +263,62 @@ func quotesParse(g *geziyor.Geziyor, r *client.Response) {
 	}
 
 	// Write page to disk
-	var filePath string
-	cleanURLPath := strings.TrimPrefix(urlPath, "/")
-	if cleanURLPath == "" {
-		filePath = filepath.Join(projectPath, "index.html")
-	} else {
-		filePath = filepath.Join(projectPath, cleanURLPath, "index.html")
-	}
+	filePath := makePageFilePath(projectPath, urlPath)
 	index, err := fsutil.OpenFile(filePath, fsutil.FsCWFlags, 0o666)
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("cannot open page output %q: %v", filePath, err)
+		return
 	}
 	body = strings.Replace(body, domain, "", -1)
 	if _, err := fsutil.WriteOSFile(index, body); err != nil {
-		log.Fatal(err)
+		log.Printf("cannot write page output %q: %v", filePath, err)
+		return
 	}
 
 	for _, href := range files.pages {
 		g.Get(r.JoinURL(href), quotesParse)
 	}
+}
+
+func makePageFilePath(basePath, rawURLPath string) string {
+	rawURLPath = strings.TrimSpace(rawURLPath)
+	rawURLPath = strings.TrimPrefix(rawURLPath, "/")
+	if rawURLPath == "" {
+		return filepath.Join(basePath, "index.html")
+	}
+
+	parts := strings.Split(rawURLPath, "/")
+	cleanParts := make([]string, 0, len(parts))
+	for _, p := range parts {
+		if p == "" {
+			continue
+		}
+		cleanParts = append(cleanParts, sanitizePathSegment(p))
+	}
+	if len(cleanParts) == 0 {
+		return filepath.Join(basePath, "index.html")
+	}
+
+	return filepath.Join(basePath, filepath.Join(cleanParts...), "index.html")
+}
+
+func sanitizePathSegment(segment string) string {
+	replacer := strings.NewReplacer(
+		"<", "_",
+		">", "_",
+		":", "_",
+		"\"", "_",
+		"\\", "_",
+		"|", "_",
+		"?", "_",
+		"*", "_",
+	)
+	segment = replacer.Replace(segment)
+	segment = strings.Trim(segment, " .")
+	if segment == "" {
+		return "_"
+	}
+	return segment
 }
 
 // open opens the specified URL in the default browser of the user.
