@@ -68,7 +68,10 @@ Flags:
   -c, --cookie                         if set true, cookies won't send
       --cookie_header string           raw Cookie header value for authenticated requests
   -h, --help                           help for goclone
+      --config string                  path to JSON config file (defaults to ./goclone.json or ~/.goclone.json)
+      --input_folder string            directory containing urls.txt used when no URL argument is provided
   -o, --open                           automatically open project in default browser
+      --output_folder string           output directory where cloned projects are stored
   -p, --proxy_string string            proxy connection string
   -r, --robots                         disable robots.txt checks
   -s, --serve                          serve the generated files using gofiber
@@ -80,6 +83,43 @@ Flags:
       --http_timeout_seconds int       HTTP request timeout for asset downloads (seconds) (default 20)
   -v, --verbose                        enable verbose logging
 ```
+
+
+## Config file
+
+You can define default values in `goclone.json` (current directory) or `~/.goclone.json`, or pass a custom file with `--config`.
+
+Example:
+
+```json
+{
+  "default_url": "https://example.com",
+  "default_output_folder": "/tmp/goclone",
+  "default_input_folder": "/tmp/goclone-input",
+  "flags": {
+    "open": false,
+    "serve": false,
+    "serve_port": 8088,
+    "user_agent": "goclone",
+    "proxy_string": "",
+    "cookie": false,
+    "cookie_header": "",
+    "robots": false,
+    "browser_endpoint": "",
+    "assets_root": "assets",
+    "max_concurrent_downloads": 8,
+    "max_download_mb": 50,
+    "http_timeout_seconds": 20,
+    "verbose": true
+  }
+}
+```
+
+Notes:
+- CLI flags still win over config values.
+- If URL argument is omitted, `default_url` is used.
+- If URL argument and `default_url` are omitted, goClone tries `<default_input_folder>/urls.txt` (or `--input_folder/urls.txt`) and uses the first non-empty, non-comment line.
+- `default_output_folder` (or `--output_folder`) changes the working directory before cloning.
 
 ## Making JS Rendered Requests
 
