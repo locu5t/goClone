@@ -66,6 +66,7 @@ Usage:
 Flags:
   -b, --browser_endpoint string        chrome headless browser WS endpoint
   -c, --cookie                         if set true, cookies won't send
+      --cookie_header string           raw Cookie header value for authenticated requests
   -h, --help                           help for goclone
   -o, --open                           automatically open project in default browser
   -p, --proxy_string string            proxy connection string
@@ -94,6 +95,20 @@ then run goclone:
 ```bash
 goclone -b "ws://localhost:9222" https://domain.com
 ```
+
+
+## Cloning authenticated pages
+
+For pages that require login (e.g. app dashboards), pass your session cookies as a raw `Cookie` header:
+
+```bash
+goclone --cookie_header "sessionid=...; other_cookie=..." https://example.com/app
+```
+
+Notes:
+- `--cookie_header` is sent on crawler requests and asset downloads.
+- Browser profiles (Chrome/Brave) are not read automatically; export/copy the cookies you need and pass them explicitly.
+- Be careful not to commit shell history or logs that contain sensitive cookie values.
 
 ## JS-rendered pages (browser_endpoint)
 

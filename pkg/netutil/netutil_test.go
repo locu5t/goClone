@@ -92,3 +92,24 @@ func Test_Extractor_TooLarge(t *testing.T) {
 		t.Fatalf("expected too large error")
 	}
 }
+
+func Test_Extractor_SendsCookieHeader(t *testing.T) {
+	origCookie := defaultCookieHeader
+	defer func() { defaultCookieHeader = origCookie }()
+	SetDefaultCookieHeader("session=abc123")
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/img/auth.png", func(w http.ResponseWriter, r *http.Request) {
+		if got := r.Header.Get("Cookie"); got != "session=abc123" {
+			t.Fatalf("expected Cookie header, got %q", got)
+		}
+		_, _ = w.Write([]byte("PNG"))
+	})
+	ts := httptest.NewServer(mux)
+	defer ts.Close()
+
+	tmp := t.TempDir()
+	if err := Extractor(ts.URL+"/img/auth.png", tmp); err != nil {
+		t.Fatalf("extractor error: %v", err)
+	}
+}

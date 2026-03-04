@@ -9,6 +9,7 @@ type Flags struct {
 	UserAgent            string
 	ProxyString          string
 	Cookies              bool
+	CookieHeader         string
 	Robots               bool
 	BrowserEndpoint      string
 	AssetsRoot           string
