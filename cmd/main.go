@@ -50,6 +50,7 @@ func main() {
 	pf.StringVarP(&flags.ProxyString, "proxy_string", "p", "", "proxy connection string")
 	pf.StringVarP(&flags.UserAgent, "user_agent", "u", "goclone", "custom User-Agent")
 	pf.BoolVarP(&flags.Cookies, "cookie", "c", false, "if set true, cookies won't send")
+	pf.StringVar(&flags.CookieHeader, "cookie_header", "", "raw Cookie header value for authenticated requests")
 	pf.BoolVarP(&flags.Robots, "robots", "r", false, "disable robots.txt checks")
 	pf.StringVarP(&flags.BrowserEndpoint, "browser_endpoint", "b", "", "chrome headless browser WS endpoint")
 	pf.StringVar(&flags.AssetsRoot, "assets_root", "assets", "root directory for downloaded assets")

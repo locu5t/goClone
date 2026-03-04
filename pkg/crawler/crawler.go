@@ -15,6 +15,7 @@ import (
 	"github.com/PuerkitoBio/goquery"
 	"github.com/geziyor/geziyor"
 	"github.com/geziyor/geziyor/client"
+	"github.com/geziyor/geziyor/middleware"
 
 	"github.com/shurco/goClone/pkg/fsutil"
 	"github.com/shurco/goClone/pkg/netutil"
@@ -30,6 +31,9 @@ func CloneSite(ctx context.Context, args []string, flag Flags) error {
 		netutil.SetAssetRoot(flag.AssetsRoot)
 	}
 	netutil.SetDefaultUserAgent(flag.UserAgent)
+	if strings.TrimSpace(flag.CookieHeader) != "" {
+		netutil.SetDefaultCookieHeader(flag.CookieHeader)
+	}
 	if flag.HTTPTimeoutSeconds > 0 {
 		netutil.SetHTTPTimeout(time.Duration(flag.HTTPTimeoutSeconds) * time.Second)
 	}
@@ -64,6 +68,9 @@ func CloneSite(ctx context.Context, args []string, flag Flags) error {
 	}
 	if flag.ProxyString != "" {
 		geziyorOptions.ProxyFunc = client.RoundRobinProxy(flag.ProxyString)
+	}
+	if strings.TrimSpace(flag.CookieHeader) != "" {
+		geziyorOptions.RequestMiddlewares = append(geziyorOptions.RequestMiddlewares, cookieHeaderMiddleware{header: flag.CookieHeader})
 	}
 	if flag.BrowserEndpoint != "" {
 		geziyorOptions.BrowserEndpoint = flag.BrowserEndpoint
@@ -107,6 +114,21 @@ func CloneSite(ctx context.Context, args []string, flag Flags) error {
 	return nil
 }
 
+type cookieHeaderMiddleware struct {
+	header string
+}
+
+func (m cookieHeaderMiddleware) ProcessRequest(r *client.Request) {
+	if strings.TrimSpace(m.header) == "" {
+		return
+	}
+	if r.Header == nil {
+		r.Header = make(http.Header)
+	}
+	r.Header.Set("Cookie", m.header)
+}
+
+var _ middleware.RequestProcessor = cookieHeaderMiddleware{}
 
 func normalizeStartURL(rawURL string) (*url.URL, string, error) {
 	u, err := url.Parse(rawURL)

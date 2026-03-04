@@ -41,9 +41,10 @@ var (
 		".woff":  AssetRoot + "/font",
 		".woff2": AssetRoot + "/font",
 	}
-	defaultUserAgent       = "goclone"
-	maxDownloadBytes int64 = 50 * 1024 * 1024 // 50MB
-	httpClient             = &http.Client{Timeout: 20 * time.Second}
+	defaultUserAgent    = "goclone"
+	defaultCookieHeader string
+	maxDownloadBytes    int64 = 50 * 1024 * 1024 // 50MB
+	httpClient                = &http.Client{Timeout: 20 * time.Second}
 )
 
 // SetAssetRoot updates AssetRoot and reconfigures folders/ext mappings.
@@ -77,6 +78,11 @@ func SetDefaultUserAgent(ua string) {
 	}
 }
 
+// SetDefaultCookieHeader sets Cookie header value for asset downloads.
+func SetDefaultCookieHeader(cookieHeader string) {
+	defaultCookieHeader = strings.TrimSpace(cookieHeader)
+}
+
 // SetMaxDownloadBytes sets a limit for asset download size.
 func SetMaxDownloadBytes(n int64) {
 	if n > 0 {
@@ -99,6 +105,9 @@ func Extractor(link, projectPath string) error {
 		return err
 	}
 	req.Header.Set("User-Agent", defaultUserAgent)
+	if defaultCookieHeader != "" {
+		req.Header.Set("Cookie", defaultCookieHeader)
+	}
 
 	resp, err := httpClient.Do(req)
 	if err != nil {

@@ -27,6 +27,7 @@ class GoCloneUI:
         self.user_agent_var = tk.StringVar(value="goclone")
         self.proxy_var = tk.StringVar()
         self.browser_endpoint_var = tk.StringVar()
+        self.cookie_header_var = tk.StringVar()
         self.assets_root_var = tk.StringVar(value="assets")
         self.max_download_mb_var = tk.StringVar(value="50")
         self.max_concurrent_var = tk.StringVar(value="8")
@@ -83,6 +84,8 @@ class GoCloneUI:
         self._add_entry(parent, row, "Proxy String", self.proxy_var)
         row += 1
         self._add_entry(parent, row, "Browser Endpoint", self.browser_endpoint_var)
+        row += 1
+        self._add_entry(parent, row, "Cookie Header", self.cookie_header_var)
         row += 1
         self._add_entry(parent, row, "Assets Root", self.assets_root_var)
         row += 1
@@ -213,6 +216,8 @@ class GoCloneUI:
             args.extend(["--proxy_string", self.proxy_var.get().strip()])
         if self.browser_endpoint_var.get().strip():
             args.extend(["--browser_endpoint", self.browser_endpoint_var.get().strip()])
+        if self.cookie_header_var.get().strip():
+            args.extend(["--cookie_header", self.cookie_header_var.get().strip()])
 
         if self.open_var.get():
             args.append("--open")
