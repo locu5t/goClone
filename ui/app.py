@@ -32,7 +32,9 @@ class GoCloneUI:
         self.max_concurrent_var = tk.StringVar(value="8")
         self.http_timeout_var = tk.StringVar(value="20")
         self.serve_port_var = tk.StringVar(value="8088")
+
         self.preview_port_var = tk.StringVar(value="8090")
+        self.preview_source_dir_var = tk.StringVar()
         self.preview_url_var = tk.StringVar(value="Preview URL: not running")
 
         self.open_var = tk.BooleanVar(value=False)
@@ -51,23 +53,41 @@ class GoCloneUI:
 
         self.master.columnconfigure(0, weight=1)
         self.master.rowconfigure(0, weight=1)
-        frame.columnconfigure(1, weight=1)
+        frame.columnconfigure(0, weight=1)
 
+        notebook = ttk.Notebook(frame)
+        notebook.grid(row=0, column=0, sticky="nsew")
+        frame.rowconfigure(0, weight=1)
+
+        clone_tab = ttk.Frame(notebook, padding=10)
+        existing_tab = ttk.Frame(notebook, padding=10)
+        notebook.add(clone_tab, text="Clone Website")
+        notebook.add(existing_tab, text="Load Existing Clone")
+
+        self._build_clone_tab(clone_tab)
+        self._build_existing_clone_tab(existing_tab)
+
+        self.log = tk.Text(frame, height=14, wrap="word")
+        self.log.grid(row=1, column=0, sticky="nsew", pady=(10, 0))
+        frame.rowconfigure(1, weight=1)
+
+    def _build_clone_tab(self, parent: ttk.Frame) -> None:
+        parent.columnconfigure(1, weight=1)
         row = 0
-        self._add_entry(frame, row, "URL", self.url_var)
+        self._add_entry(parent, row, "URL", self.url_var)
         row += 1
-        self._add_output_selector(frame, row)
+        self._add_output_selector(parent, row)
         row += 1
-        self._add_entry(frame, row, "User-Agent", self.user_agent_var)
+        self._add_entry(parent, row, "User-Agent", self.user_agent_var)
         row += 1
-        self._add_entry(frame, row, "Proxy String", self.proxy_var)
+        self._add_entry(parent, row, "Proxy String", self.proxy_var)
         row += 1
-        self._add_entry(frame, row, "Browser Endpoint", self.browser_endpoint_var)
+        self._add_entry(parent, row, "Browser Endpoint", self.browser_endpoint_var)
         row += 1
-        self._add_entry(frame, row, "Assets Root", self.assets_root_var)
+        self._add_entry(parent, row, "Assets Root", self.assets_root_var)
         row += 1
 
-        numbers = ttk.Frame(frame)
+        numbers = ttk.Frame(parent)
         numbers.grid(row=row, column=0, columnspan=3, sticky="ew", pady=(0, 8))
         numbers.columnconfigure((1, 3, 5, 7), weight=1)
         self._add_small_entry(numbers, 0, "Serve Port", self.serve_port_var)
@@ -76,7 +96,7 @@ class GoCloneUI:
         self._add_small_entry(numbers, 6, "HTTP Timeout", self.http_timeout_var)
         row += 1
 
-        checks = ttk.Frame(frame)
+        checks = ttk.Frame(parent)
         checks.grid(row=row, column=0, columnspan=3, sticky="w", pady=(0, 8))
         for txt, var in [
             ("Open", self.open_var),
@@ -88,26 +108,37 @@ class GoCloneUI:
             ttk.Checkbutton(checks, text=txt, variable=var).pack(side=tk.LEFT, padx=(0, 12))
         row += 1
 
-        buttons = ttk.Frame(frame)
-        buttons.grid(row=row, column=0, columnspan=3, sticky="ew", pady=(0, 8))
+        buttons = ttk.Frame(parent)
+        buttons.grid(row=row, column=0, columnspan=3, sticky="ew")
         ttk.Button(buttons, text="Start Clone", command=self.start_clone).pack(side=tk.LEFT)
-        ttk.Button(buttons, text="Stop", command=self.stop_clone).pack(side=tk.LEFT, padx=(8, 0))
-        row += 1
+        ttk.Button(buttons, text="Stop Clone", command=self.stop_clone).pack(side=tk.LEFT, padx=(8, 0))
 
-        preview = ttk.LabelFrame(frame, text="Preview cloned website", padding=8)
-        preview.grid(row=row, column=0, columnspan=3, sticky="ew", pady=(0, 8))
+    def _build_existing_clone_tab(self, parent: ttk.Frame) -> None:
+        parent.columnconfigure(1, weight=1)
+
+        ttk.Label(
+            parent,
+            text="Use this screen to load and preview a previously cloned website directory.",
+        ).grid(row=0, column=0, columnspan=3, sticky="w", pady=(0, 8))
+
+        ttk.Label(parent, text="Cloned Site Directory").grid(row=1, column=0, sticky="w", pady=(0, 4))
+        ttk.Entry(parent, textvariable=self.preview_source_dir_var).grid(row=1, column=1, sticky="ew", pady=(0, 4))
+        ttk.Button(parent, text="Browse", command=self.browse_existing_clone).grid(row=1, column=2, sticky="e", pady=(0, 4))
+
+        preview = ttk.LabelFrame(parent, text="Preview", padding=8)
+        preview.grid(row=2, column=0, columnspan=3, sticky="ew", pady=(8, 8))
         preview.columnconfigure(5, weight=1)
+
         ttk.Label(preview, text="Preview Port").grid(row=0, column=0, sticky="w")
         ttk.Entry(preview, textvariable=self.preview_port_var, width=8).grid(row=0, column=1, sticky="w", padx=(6, 10))
-        ttk.Button(preview, text="Run Preview", command=self.start_preview).grid(row=0, column=2, sticky="w")
+        ttk.Button(preview, text="Run Preview", command=self.start_preview_from_selected_dir).grid(row=0, column=2, sticky="w")
         ttk.Button(preview, text="Stop Preview", command=self.stop_preview).grid(row=0, column=3, sticky="w", padx=(8, 0))
         ttk.Button(preview, text="Open in Browser", command=self.open_preview_url).grid(row=0, column=4, sticky="w", padx=(8, 0))
         ttk.Label(preview, textvariable=self.preview_url_var).grid(row=1, column=0, columnspan=6, sticky="w", pady=(8, 0))
-        row += 1
 
-        self.log = tk.Text(frame, height=18, wrap="word")
-        self.log.grid(row=row, column=0, columnspan=3, sticky="nsew")
-        frame.rowconfigure(row, weight=1)
+        actions = ttk.Frame(parent)
+        actions.grid(row=3, column=0, columnspan=3, sticky="w")
+        ttk.Button(actions, text="Use Derived Clone Folder", command=self.start_preview).pack(side=tk.LEFT)
 
     def _add_entry(self, parent: ttk.Frame, row: int, label: str, var: tk.StringVar) -> None:
         ttk.Label(parent, text=label).grid(row=row, column=0, sticky="w", pady=(0, 4))
@@ -126,6 +157,12 @@ class GoCloneUI:
         selected = filedialog.askdirectory(initialdir=self.output_var.get() or str(Path.home()))
         if selected:
             self.output_var.set(selected)
+
+    def browse_existing_clone(self) -> None:
+        initial_dir = self.preview_source_dir_var.get() or self.output_var.get() or str(Path.home())
+        selected = filedialog.askdirectory(initialdir=initial_dir)
+        if selected:
+            self.preview_source_dir_var.set(selected)
 
     def _binary_path(self) -> Path:
         if os.name == "nt":
@@ -200,14 +237,24 @@ class GoCloneUI:
         host = url.split("/")[0].strip()
         return Path(self.output_var.get().strip()) / host
 
+    def start_preview_from_selected_dir(self) -> None:
+        selected_dir = Path(self.preview_source_dir_var.get().strip())
+        self._start_preview(selected_dir)
+
     def start_preview(self) -> None:
+        self._start_preview(self._project_dir())
+
+    def _start_preview(self, project_dir: Path) -> None:
         if self.preview_proc and self.preview_proc.poll() is None:
             messagebox.showinfo("goClone", "Preview server is already running.")
             return
 
-        project_dir = self._project_dir()
-        if not project_dir.exists():
-            messagebox.showerror("goClone", f"Cloned project not found: {project_dir}\nRun cloning first.")
+        if not str(project_dir).strip():
+            messagebox.showerror("goClone", "Select a cloned site directory first.")
+            return
+
+        if not project_dir.exists() or not project_dir.is_dir():
+            messagebox.showerror("goClone", f"Cloned project not found: {project_dir}")
             return
 
         port = self.preview_port_var.get().strip()
