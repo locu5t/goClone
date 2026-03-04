@@ -1,8 +1,11 @@
 import os
 import queue
+import socket
 import subprocess
+import sys
 import threading
 import tkinter as tk
+import webbrowser
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 
@@ -16,6 +19,7 @@ class GoCloneUI:
         self.master = master
         self.master.title("goClone UI")
         self.proc: subprocess.Popen[str] | None = None
+        self.preview_proc: subprocess.Popen[str] | None = None
         self.log_queue: queue.Queue[str] = queue.Queue()
 
         self.url_var = tk.StringVar(value="https://example.com")
@@ -28,6 +32,8 @@ class GoCloneUI:
         self.max_concurrent_var = tk.StringVar(value="8")
         self.http_timeout_var = tk.StringVar(value="20")
         self.serve_port_var = tk.StringVar(value="8088")
+        self.preview_port_var = tk.StringVar(value="8090")
+        self.preview_url_var = tk.StringVar(value="Preview URL: not running")
 
         self.open_var = tk.BooleanVar(value=False)
         self.serve_var = tk.BooleanVar(value=False)
@@ -36,6 +42,7 @@ class GoCloneUI:
         self.verbose_var = tk.BooleanVar(value=True)
 
         self._build_widgets()
+        self.master.protocol("WM_DELETE_WINDOW", self._on_close)
         self._poll_logs()
 
     def _build_widgets(self) -> None:
@@ -85,6 +92,17 @@ class GoCloneUI:
         buttons.grid(row=row, column=0, columnspan=3, sticky="ew", pady=(0, 8))
         ttk.Button(buttons, text="Start Clone", command=self.start_clone).pack(side=tk.LEFT)
         ttk.Button(buttons, text="Stop", command=self.stop_clone).pack(side=tk.LEFT, padx=(8, 0))
+        row += 1
+
+        preview = ttk.LabelFrame(frame, text="Preview cloned website", padding=8)
+        preview.grid(row=row, column=0, columnspan=3, sticky="ew", pady=(0, 8))
+        preview.columnconfigure(5, weight=1)
+        ttk.Label(preview, text="Preview Port").grid(row=0, column=0, sticky="w")
+        ttk.Entry(preview, textvariable=self.preview_port_var, width=8).grid(row=0, column=1, sticky="w", padx=(6, 10))
+        ttk.Button(preview, text="Run Preview", command=self.start_preview).grid(row=0, column=2, sticky="w")
+        ttk.Button(preview, text="Stop Preview", command=self.stop_preview).grid(row=0, column=3, sticky="w", padx=(8, 0))
+        ttk.Button(preview, text="Open in Browser", command=self.open_preview_url).grid(row=0, column=4, sticky="w", padx=(8, 0))
+        ttk.Label(preview, textvariable=self.preview_url_var).grid(row=1, column=0, columnspan=6, sticky="w", pady=(8, 0))
         row += 1
 
         self.log = tk.Text(frame, height=18, wrap="word")
@@ -176,6 +194,76 @@ class GoCloneUI:
         if self.proc and self.proc.poll() is None:
             self.proc.terminate()
             self._append_log("\nStopped by user.\n")
+
+    def _project_dir(self) -> Path:
+        url = self.url_var.get().strip().replace("https://", "").replace("http://", "")
+        host = url.split("/")[0].strip()
+        return Path(self.output_var.get().strip()) / host
+
+    def start_preview(self) -> None:
+        if self.preview_proc and self.preview_proc.poll() is None:
+            messagebox.showinfo("goClone", "Preview server is already running.")
+            return
+
+        project_dir = self._project_dir()
+        if not project_dir.exists():
+            messagebox.showerror("goClone", f"Cloned project not found: {project_dir}\nRun cloning first.")
+            return
+
+        port = self.preview_port_var.get().strip()
+        if not port.isdigit():
+            messagebox.showerror("goClone", "Preview port must be numeric.")
+            return
+
+        if self._port_in_use(int(port)):
+            messagebox.showerror("goClone", f"Port {port} is already in use.")
+            return
+
+        self.preview_proc = subprocess.Popen(
+            [sys.executable, "-m", "http.server", port],
+            cwd=project_dir,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            bufsize=1,
+        )
+        threading.Thread(target=self._capture_preview_output, daemon=True).start()
+
+        preview_url = f"http://127.0.0.1:{port}/"
+        self.preview_url_var.set(f"Preview URL: {preview_url}")
+        self._append_log(f"\nPreview started from {project_dir} at {preview_url}\n")
+
+    def stop_preview(self) -> None:
+        if self.preview_proc and self.preview_proc.poll() is None:
+            self.preview_proc.terminate()
+            self._append_log("Preview stopped by user.\n")
+        self.preview_url_var.set("Preview URL: not running")
+
+    def open_preview_url(self) -> None:
+        if not (self.preview_proc and self.preview_proc.poll() is None):
+            messagebox.showinfo("goClone", "Start preview first.")
+            return
+        preview_url = self.preview_url_var.get().replace("Preview URL: ", "").strip()
+        if preview_url and preview_url != "not running":
+            webbrowser.open(preview_url)
+
+    def _capture_preview_output(self) -> None:
+        if not self.preview_proc or not self.preview_proc.stdout:
+            return
+        for line in self.preview_proc.stdout:
+            self.log_queue.put(f"[preview] {line}")
+        code = self.preview_proc.wait()
+        self.log_queue.put(f"[preview] Process exited with code {code}.\n")
+
+    def _port_in_use(self, port: int) -> bool:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.settimeout(0.2)
+            return s.connect_ex(("127.0.0.1", port)) == 0
+
+    def _on_close(self) -> None:
+        self.stop_clone()
+        self.stop_preview()
+        self.master.destroy()
 
     def _capture_output(self) -> None:
         if not self.proc or not self.proc.stdout:

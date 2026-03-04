@@ -173,6 +173,11 @@ The UI (`ui/app.py`) lets you set:
 
 The lower panel streams process logs and final exit code from the Go binary.
 
+The UI also includes a **Preview cloned website** section that can:
+- Start a local test server rooted at the cloned host folder
+- Show the preview URL
+- Open that URL in your default browser so you can test the cloned site like a live web app
+
 ### Troubleshooting
 
 - **`python` not found**: install Python 3.10+ and enable "Add python.exe to PATH".
